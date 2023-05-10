@@ -4,13 +4,15 @@ import '@mediapipe/face_mesh';
 import '@tensorflow/tfjs-backend-webgl';
 import * as faceLandmarksDetection from '@tensorflow-models/face-landmarks-detection';
 import * as tf from "@tensorflow/tfjs-core";
-import { Scene, AmbientLight, PointLight, PerspectiveCamera, WebGLRenderer, BufferGeometry, Float32BufferAttribute, TextureLoader, MeshBasicMaterial, Color, sRGBEncoding, Mesh } from 'three';
+import { Scene, AmbientLight, PointLight, PerspectiveCamera, WebGLRenderer, BufferGeometry, Float32BufferAttribute, TextureLoader, MeshBasicMaterial, Color, sRGBEncoding, Mesh, Object3D, Box3, Vector3, Matrix4 } from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { TRIANGULATION } from '../../assets/TRIANGULATION'
 import { UV_COORDS } from '../../assets/UV_COORDS'
 import meshList from '../../assets/mesh.json'
+import paris from '../../assets/img/paris.png'
+import { Face } from "kalidokit";
 
-
-let globalModel, webcamElement, render3D, mesh, geometry, scene
+let globalModel, webcamElement, render3D, mesh, geometry, scene, object, Object3d, loaderIsLoad = false, needAddObject3D = true
 
 const Home = () => {
     
@@ -61,7 +63,7 @@ const Home = () => {
     }
     // 识别
     const recognition = async () => {
-        try {
+        // try {
             const video = webcam.current;
             const faces = await globalModel.estimateFaces(video, {
                 flipHorizontal: false, //镜像
@@ -69,19 +71,34 @@ const Home = () => {
             
             if (faces.length > 0) {
                 const keypoints = faces[0].keypoints;
-                render3D({ 
-                    scaledMesh:keypoints.reduce((acc, pos) => {
-                        acc.push([pos.x,pos.y,pos.z])
-                        return acc
-                    }, [])
+                const scaledMesh = keypoints.reduce((acc, pos) => {
+                    acc.push([pos.x,pos.y,pos.z])
+                    return acc
+                }, [])
+                
+                const faceMesh = resolveMesh(scaledMesh)
+
+                const faceRig = Face.solve(keypoints, {
+                    runtime: "mediapipe",
+                    video: webcam.current,
+                    imageSize: { height: overlay.current.canvasHeight, width: overlay.current.canvasWidth },
+                    smoothBlink: false,
+                    blinkSettings: [.25, .75]
+                });
+                
+                render3D({
+                    scaledMesh,
+                    midwayBetweenEyes: [168].map(e => faceMesh[e]),
+                    faceMesh,
+                    faceRig
                 });
             }else{
-                render3D({scaledMesh:[]})
+                render3D({scaledMesh:[], midwayBetweenEyes: [], faceMesh: [], })
             }
             requestAnimationFrame(recognition)
-        } catch (error) {
-            console.log(error);
-        }
+        // } catch (error) {
+        //     console.log(error);
+        // }
     }
     
     const addMesh = (meshIndex = 0) => {
@@ -109,6 +126,10 @@ const Home = () => {
             scene.add(mesh)
         })
     }
+
+    const resolveMesh = (faceMesh, vw = webcam.current.videoWidth, vh = webcam.current.videoHeight) => {
+        return faceMesh.map(p => [p[0] - vw / 2, vh / 2 - p[1], -p[2]])
+    }
     
     // 3D 贴图
     const loadScene = () => {
@@ -126,7 +147,7 @@ const Home = () => {
         camera.position.z = -( webcamElement.videoHeight / 2 ) / Math.tan( 45 / 2 )*/
         camera.position.set(0, 0, webcamElement.videoHeight * 1.18)
         // const faceCenter = getFaceCenter()
-        // camera.lookAt(scene.position)
+        // camera.lookAt(camera.position)
         scene.add( camera );
 
         // 渲染器
@@ -146,14 +167,16 @@ const Home = () => {
             geometry.setAttribute('position', new Float32BufferAttribute(positionBuffer, 3))
             geometry.attributes.position.needsUpdate = true
         }
-        const resolveMesh = (faceMesh, vw, vh) => {
-            return faceMesh.map(p => [p[0] - vw / 2, vh / 2 - p[1], -p[2]])
-        }
+        
 
         // 渲染
-        render3D = function (prediction) {
+        render3D = (prediction) => {
             if (prediction) {
-                updateGeometry(prediction)
+                // updateGeometry(prediction)
+                // console.log('prediction', prediction)
+                // Object3d && Object3d.remove(object)
+                // scene&& scene.remove(Object3d)
+                render3DModel('https://dcdn.it120.cc/2022/12/07/55607c9c-1aaa-494a-b332-6a5360933c4a.glb', prediction)
             }
             renderer.render(scene, camera)
         }
@@ -184,9 +207,150 @@ const Home = () => {
         setBlur(e.target.value / 50)
     }
     
+    const canvasBg = useRef(null)
+
+    /*// 调用模型进行去除背景
+    async function main() {
+        const img = new Image()
+        img.src = paris
+        const cvs = overlay.current
+        const video = webcam.current
+        // const video = document.querySelector('video');
+        // const canvas = document.getElementById('canvas');
+
+        const webcam = await tf.data.webcam(video);
+        const model = await tf.loadGraphModel('../../model/model.json');
+
+        const ctxBg = canvasBg.current.getContext('2d')
+        ctxBg.drawImage(img,0,0,cvs.width,cvs.height)
+
+        let [r1i, r2i, r3i, r4i] = [tf.tensor(0.), tf.tensor(0.), tf.tensor(0.), tf.tensor(0.)];
+
+        const downsample_ratio = tf.tensor(0.5);
+        while (true) {
+            await tf.nextFrame();
+            const img = await webcam.capture();
+            const src = tf.tidy(() => img.expandDims(0).div(255));
+            const [fgr, pha, r1o, r2o, r3o, r4o] = await model.executeAsync(
+                { src, r1i, r2i, r3i, r4i, downsample_ratio },
+                ['fgr', 'pha', 'r1o', 'r2o', 'r3o', 'r4o']
+            );
+            drawMatte(fgr.clone(), pha.clone(), cvs);
+            tf.dispose([img, src, fgr, pha, r1i, r2i, r3i, r4i]);
+            [r1i, r2i, r3i, r4i] = [r1o, r2o, r3o, r4o];
+        }
+    }
+
+    async function drawMatte(fgr, pha, canvas) {
+        const rgba = tf.tidy(() => {
+            const rgb = (fgr !== null) ?
+                fgr.squeeze(0).mul(255).cast('int32') :
+                tf.fill([pha.shape[1], pha.shape[2], 3], 255, 'int32');
+            const a = (pha !== null) ?
+                pha.squeeze(0).mul(255).cast('int32') :
+                tf.fill([fgr.shape[1], fgr.shape[2], 1], 255, 'int32');
+            return tf.concat([rgb, a], -1);
+        });
+
+        fgr && fgr.dispose();
+        pha && pha.dispose();
+        const [height, width] = rgba.shape.slice(0, 2);
+        const pixelData = new Uint8ClampedArray(await rgba.data());
+        const imageData = new ImageData(pixelData, width, height);
+        canvas.width = width;
+        canvas.height = height;
+        const context = canvas.getContext("2d")
+        context.putImageData(imageData, 0, 0);
+        context.getImageData(0, 0, width, height)
+        context.globalCompositeOperation = "destination-over"
+        context.drawImage(canvasBg.current, 0, 0)
+        rgba.dispose();
+    }*/
+    
     useEffect(() => {
         setupWebcam()
+        // main()
     }, [])
+    
+    const render3DModel = (modelUrl, prediction) => {
+        if (!loaderIsLoad) {
+            loaderIsLoad = true
+            const loader = new GLTFLoader();
+            Object3d = new Object3D();
+            loader.load(modelUrl, (gltf) => {
+                object = gltf.scene
+                const box = new Box3().setFromObject(object)
+                const size = box.getSize(new Vector3()).length()
+                const center = box.getCenter(new Vector3())
+                object.position.x += (object.position.x - center.x);
+                object.position.y += (object.position.y - center.y + 1);
+                object.position.z += (object.position.z - center.z - 15);
+                Object3d.add(object)
+                needAddObject3D && scene.add(Object3d)
+                needAddObject3D = false
+            })
+        }
+
+        const getScale = (e, t = 0, s = 1) => {
+            const n = new Vector3(...e[t]), i = new Vector3(...e[s]);
+            return n.distanceTo(i)
+        }
+
+        const getRotation = (e, t = 0, s = 1, n = 2) => {
+            const i = new Vector3(...e[t]), r = new Vector3(...e[s]), o = new Vector3(...e[n]),
+                a = new Matrix4, c = r.clone().sub(o).normalize(),
+                l = r.clone().add(o).multiplyScalar(.5).sub(i).multiplyScalar(-1).normalize(),
+                h = (new Vector3).crossVectors(c, l).normalize();
+            return a.makeBasis(c, l, h).invert()
+        }
+
+        const findMorphTarget = (e) => {
+                const s = {}, n = e => {
+                    if ("Mesh" === e.type && e.morphTargetInfluences) {
+                        const t = e;
+                        Object.keys(t.morphTargetDictionary).forEach(e => {
+                            s[e] = (s => {
+                                t.morphTargetInfluences[t.morphTargetDictionary[e]] = s
+                            })
+                        })
+                    }
+                    e.children.forEach(n)
+                };
+                return n(e), s
+            }
+
+        const morphTarget = findMorphTarget(scene)
+        // console.log('morphTarget', morphTarget)
+        
+        // 计算 Matrix
+        if (!prediction.midwayBetweenEyes || !prediction.scaledMesh.length) {
+            scene.remove(Object3d)
+            return
+        } else {
+            
+        }
+        const position = prediction.midwayBetweenEyes[0]
+        const scale = getScale(prediction.scaledMesh, 234, 454)
+        const rotation = getRotation(prediction.scaledMesh, 10, 50, 280)
+        if (object) {
+            object.position.set(...position)
+            object.scale.setScalar(scale / 20)
+            object.scale.x *= -1
+            object.rotation.setFromRotationMatrix(rotation)
+            object.rotation.y = -object.rotation.y
+            object.rotateZ(Math.PI)
+            object.rotateX(-Math.PI * .05)
+        }
+            
+        if (morphTarget) {
+            // flipped
+            morphTarget['leftEye'] && morphTarget['leftEye'](1 - prediction.faceRig.eye.r)
+            morphTarget['rightEye'] && morphTarget['rightEye'](1 - prediction.faceRig.eye.l)
+            morphTarget['mouth'] && morphTarget['mouth'](prediction.faceRig.mouth.shape.A)
+        }
+        
+        
+    }
     
     return(
         <div>
@@ -212,6 +376,9 @@ const Home = () => {
                 <canvas ref={ overlay } 
                         width={window.screen.width} 
                         height={window.screen.height}
+                />
+                <canvas ref={ canvasBg } 
+                        style={{ display: "none" }}
                 />
             </div>
 
