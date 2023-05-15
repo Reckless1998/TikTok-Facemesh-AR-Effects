@@ -4,7 +4,7 @@ import '@mediapipe/face_mesh';
 import '@tensorflow/tfjs-backend-webgl';
 import * as faceLandmarksDetection from '@tensorflow-models/face-landmarks-detection';
 import * as tf from "@tensorflow/tfjs-core";
-import { Scene, AmbientLight, PointLight, PerspectiveCamera, WebGLRenderer, BufferGeometry, Float32BufferAttribute, TextureLoader, MeshBasicMaterial, Color, sRGBEncoding, Mesh, Object3D, Box3, Vector3, Matrix4 } from 'three';
+import { Scene, AmbientLight, PointLight, PerspectiveCamera, WebGLRenderer, BufferGeometry, Float32BufferAttribute, TextureLoader, MeshBasicMaterial, Color, sRGBEncoding, Mesh, Object3D, Box3, Vector3, Matrix4, MathUtils } from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { TRIANGULATION } from '../../assets/TRIANGULATION'
 import { UV_COORDS } from '../../assets/UV_COORDS'
@@ -12,7 +12,13 @@ import meshList from '../../assets/mesh.json'
 import paris from '../../assets/img/paris.png'
 import { Face } from "kalidokit";
 
-let globalModel, webcamElement, render3D, mesh, geometry, scene, object, Object3d, loaderIsLoad = false, needAddObject3D = true
+
+// face effects page
+import dog_face from './dog_face.html'
+import cloud from './cloud.html'
+
+
+let globalModel, webcamElement, render3D, mesh, geometry, scene, object, Object3d, loaderIsLoad = false, needAddObject3D = true, camera
 
 const Home = () => {
     
@@ -137,17 +143,18 @@ const Home = () => {
         scene = new Scene();
 
         // 添加一些光照
-        scene.add( new AmbientLight( 0xcccccc, 0.4 ) );
+        scene.add( new AmbientLight( 0xcccccc, 1 ) );
         
         // 透视相机
-        const camera = new PerspectiveCamera( 45, webcamElement.videoWidth / webcamElement.videoHeight, 0.1, 2000 );
-        camera.add( new PointLight( 0xffffff, 0.8 ) );
+        camera = new PerspectiveCamera( 45, webcamElement.videoWidth / webcamElement.videoHeight, 0.1, 2000 );
+        camera.add( new PointLight( 0xffffff, 1 ) );
         /*camera.position.x = webcamElement.videoWidth / 2;
         camera.position.y = - webcamElement.videoHeight / 2;
         camera.position.z = -( webcamElement.videoHeight / 2 ) / Math.tan( 45 / 2 )*/
+        // camera.position.set(0, 0, webcamElement.videoHeight * 1.18)
         camera.position.set(0, 0, webcamElement.videoHeight * 1.18)
         // const faceCenter = getFaceCenter()
-        // camera.lookAt(camera.position)
+        // camera.lookAt(scene.position)
         scene.add( camera );
 
         // 渲染器
@@ -207,7 +214,6 @@ const Home = () => {
         setBlur(e.target.value / 50)
     }
     
-    const canvasBg = useRef(null)
 
     /*// 调用模型进行去除背景
     async function main() {
@@ -277,6 +283,7 @@ const Home = () => {
             loaderIsLoad = true
             const loader = new GLTFLoader();
             Object3d = new Object3D();
+            // Object3d.position.set(0, 0, 0)
             loader.load(modelUrl, (gltf) => {
                 object = gltf.scene
                 const box = new Box3().setFromObject(object)
@@ -305,29 +312,28 @@ const Home = () => {
         }
 
         const findMorphTarget = (e) => {
-                const s = {}, n = e => {
-                    if ("Mesh" === e.type && e.morphTargetInfluences) {
-                        const t = e;
-                        Object.keys(t.morphTargetDictionary).forEach(e => {
-                            s[e] = (s => {
-                                t.morphTargetInfluences[t.morphTargetDictionary[e]] = s
-                            })
+            const s = {}, n = e => {
+                if ("Mesh" === e.type && e.morphTargetInfluences) {
+                    const t = e;
+                    Object.keys(t.morphTargetDictionary).forEach(e => {
+                        s[e] = (s => {
+                            t.morphTargetInfluences[t.morphTargetDictionary[e]] = s
                         })
-                    }
-                    e.children.forEach(n)
-                };
-                return n(e), s
-            }
+                    })
+                }
+                e.children.forEach(n)
+            };
+            return n(e), s
+        }
 
         const morphTarget = findMorphTarget(scene)
-        // console.log('morphTarget', morphTarget)
         
         // 计算 Matrix
         if (!prediction.midwayBetweenEyes || !prediction.scaledMesh.length) {
             scene.remove(Object3d)
             return
         } else {
-            
+            scene.add(Object3d)
         }
         const position = prediction.midwayBetweenEyes[0]
         const scale = getScale(prediction.scaledMesh, 234, 454)
@@ -377,12 +383,10 @@ const Home = () => {
                         width={window.screen.width} 
                         height={window.screen.height}
                 />
-                <canvas ref={ canvasBg } 
-                        style={{ display: "none" }}
-                />
+               
             </div>
 
-            <form>
+            {/*<form>
                 <label htmlFor="brightness">亮度</label>
                 <input type="range" 
                        id="brightness" 
@@ -395,8 +399,14 @@ const Home = () => {
                        onInput={(e) => changeBlur(e)}
                        defaultValue={0}
                 />
-            </form>
-            
+            </form>*/}
+
+
+            <iframe
+                srcDoc={cloud}
+                style={{ width: '100%', border: 0, margin: 0 }}
+                sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+            />
            
         </div>
     )

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta http-equiv="content-language" content="en-EN" />
+    
+    <title>JEELIZ FACEFILTER: DOG</title>
+    
+    <!-- INCLUDE JEELIZ FACEFILTER SCRIPT -->
+    <script src="../../../public/js/jeelizFaceFilter.js"></script>
+
+    <!-- INCLUDE THREE.JS -->
+    <script src="../../../public/libs/v97/three.js"></script>
+
+    <!-- INCLUDE JEELIZRESIZER -->
+    <script src="../../../public/helpers/JeelizResizer.js"></script>
+
+    <!-- INCLUDE JEELIZTHREEJSHELPER -->
+    <script src="../../../public/helpers/JeelizThreeHelper.js"></script>
+
+    <!-- INCLUDE FLEXMATERIAL (CUSTOM DEV) -->
+    <script src="../../../public/libs/FlexMaterial/ThreeFlexMaterial.js"></script>
+
+    <!-- INCLUDE TWEEN.JS -->
+    <script src='../../../public/tween/v16_3_5/Tween.min.js'></script>
+
+    <!-- INCLUDE GLFX -->
+    <script src='../../../public/dog_face/libs/glfx.js'></script>
+
+    <!-- INCLUDE DEMO SCRIPT -->
+    <script src="../../../public/dog_face/main.js"></script>
+
+    <!-- INCLUDE ADDDRAGEVENTLISTENER.JS -->
+    <script src='../../../public/helpers/addDragEventListener.js'></script>
+
+    <style>
+      body {
+        margin: 0;
+        overflow: hidden;
+      }
+      .canvasContainer {
+        position: relative;
+        margin: 0 auto;
+        text-align: center;
+      }
+      #jeeFaceFilterCanvas {
+        z-index: 0;
+        max-height: 100%;
+        left: auto;
+        top: auto;
+        width: 100vmin;
+        transform: translate(0,0) rotateY(180deg);
+        position: static;
+      }
+    </style>
+    
+  </head>
+  
+  <body>
+    <div class="canvasContainer">
+      <canvas width="600" height="600" id='jeeFaceFilterCanvas'></canvas>
+    </div>
+  </body>
+</html>
+ 
+ 
