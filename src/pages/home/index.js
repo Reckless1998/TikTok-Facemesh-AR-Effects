@@ -14,8 +14,21 @@ import { Face } from "kalidokit";
 
 
 // face effects page
-import dog_face from './dog_face.html'
-import cloud from './cloud.html'
+import dog_face from '../../filters/dog_face.html'
+import cloud from '../../filters/cloud.html'
+import miel_pops from '../../filters/miel_pops.html'
+import angel_demon from '../../filters/angel_demon.html'
+import luffys_hat from '../../filters/luffys_hat.html'
+import tiger from '../../filters/tiger.html'
+
+const filters = [
+    { name: 'dog_face', src: dog_face },
+    { name: 'cloud', src: cloud },
+    { name: 'miel_pops', src: miel_pops },
+    { name: 'angel_demon', src: angel_demon },
+    { name: 'luffys_hat', src: luffys_hat },
+    { name: 'tiger', src: tiger },
+]
 
 
 let globalModel, webcamElement, render3D, mesh, geometry, scene, object, Object3d, loaderIsLoad = false, needAddObject3D = true, camera
@@ -183,7 +196,7 @@ const Home = () => {
                 // console.log('prediction', prediction)
                 // Object3d && Object3d.remove(object)
                 // scene&& scene.remove(Object3d)
-                render3DModel('https://dcdn.it120.cc/2022/12/07/55607c9c-1aaa-494a-b332-6a5360933c4a.glb', prediction)
+                // render3DModel('https://dcdn.it120.cc/2022/12/07/55607c9c-1aaa-494a-b332-6a5360933c4a.glb', prediction)
             }
             renderer.render(scene, camera)
         }
@@ -274,7 +287,7 @@ const Home = () => {
     }*/
     
     useEffect(() => {
-        setupWebcam()
+        // setupWebcam()
         // main()
     }, [])
     
@@ -358,6 +371,11 @@ const Home = () => {
         
     }
     
+    const [filterIndex, setFilterIndex] = useState(0)
+    const iframe = useRef(null)
+    
+    const changeFilter = index => setFilterIndex(index)
+    
     return(
         <div>
             <div className='meshListBox'>
@@ -373,6 +391,20 @@ const Home = () => {
                 }
             </div>
             
+            
+            
+            <div>
+                { filters.map((item, index) => 
+                    <button onClick={() => changeFilter(index)}
+                            key={index}
+                    >
+                        { item.name }
+                    </button>
+                )}
+            </div>
+            
+            
+            
             <div className="meshBox">
                 <video ref={ webcam } 
                        width={window.screen.width} 
@@ -383,7 +415,12 @@ const Home = () => {
                         width={window.screen.width} 
                         height={window.screen.height}
                 />
-               
+                <iframe
+                    ref={iframe}
+                    srcDoc={filters[filterIndex].src}
+                    style={{ width: '100%', border: 0, margin: 0 }}
+                    sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+                />
             </div>
 
             {/*<form>
@@ -402,11 +439,7 @@ const Home = () => {
             </form>*/}
 
 
-            <iframe
-                srcDoc={cloud}
-                style={{ width: '100%', border: 0, margin: 0 }}
-                sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
-            />
+            
            
         </div>
     )
