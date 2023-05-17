@@ -258,6 +258,9 @@ function main() {
 
 function init_faceFilter(videoSettings){
   JEELIZFACEFILTER.init({
+    scanSettings: {
+      scale0Factor: 0.5,
+    },
     canvasId: 'jeeFaceFilterCanvas',
     NNCPath: './neuralNets/', // path of NN_DEFAULT.json file
     videoSettings: videoSettings,

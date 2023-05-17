@@ -20,6 +20,16 @@ let ISANIMATIONOVER = false;
 let _flexParts = [];
 let _videoGeometry = null;
 
+window.addEventListener('message', (e) => {
+  console.log('receive message', e)
+  if (e.data.takePhoto) {
+    const canvas = document.querySelector('#jeeFaceFilterCanvas')
+    const src = canvas.toDataURL()
+    
+    e.source.postMessage({src}, e.origin)
+  }
+});
+
 
 // callback: launched if a face is detected or lost
 function detect_callback(isDetected) {
@@ -73,6 +83,7 @@ function apply_filter() {
     // Create the effet
     canvas.draw(texture).vignette(0.5, 0.6).update();
 
+    // color filter
     const canvasOpacity = document.createElement('canvas');
     canvasOpacity.width = 512;
     canvasOpacity.height = 512;
@@ -280,6 +291,9 @@ function main(){
 
 function init_faceFilter(videoSettings){
   JEELIZFACEFILTER.init({
+    scanSettings: {
+      scale0Factor: 0.5,
+    },
     canvasId: 'jeeFaceFilterCanvas',
     NNCPath: './neuralNets/', // root of NN_DEFAULT.json file
     videoSettings: videoSettings,

@@ -376,6 +376,29 @@ const Home = () => {
     
     const changeFilter = index => setFilterIndex(index)
     
+    
+    
+    const takePhoto = () => {
+        iframe.current.contentWindow.postMessage({ takePhoto: true }, '*')
+    }
+    
+    
+    const takePhotoListenerRef = useRef(null)
+    
+    
+    useEffect(() => {
+        const takePhotoListener = (e) => {
+            if (e.data.src) {
+                // console.log('receive base64', e.data.src)
+            }
+        }
+        
+        !takePhotoListenerRef.current && (window.onmessage = takePhotoListener)
+        // save the listener to prevent register listener frequently
+        takePhotoListenerRef.current = takePhotoListener
+    }, [])
+    
+    
     return(
         <div>
             <div className='meshListBox'>
@@ -404,6 +427,8 @@ const Home = () => {
             </div>
             
             
+            <button onClick={() => takePhoto()}>拍照</button>
+            
             
             <div className="meshBox">
                 <video ref={ webcam } 
@@ -416,8 +441,8 @@ const Home = () => {
                         height={window.screen.height}
                 />
                 <iframe
-                    ref={iframe}
-                    srcDoc={filters[filterIndex].src}
+                    ref={ iframe }
+                    srcDoc={ filters[filterIndex].src }
                     style={{ width: '100%', border: 0, margin: 0 }}
                     sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
                 />

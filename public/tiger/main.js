@@ -179,6 +179,9 @@ function init_threeScene(spec){
 // Entry point:
 function main(){
   JEELIZFACEFILTER.init({
+    scanSettings: {
+      scale0Factor: 0.5,
+    },
     canvasId: 'jeeFaceFilterCanvas',
     NNCPath: './neuralNets/', // path of NN_DEFAULT.json file
     callbackReady: function(errCode, spec){
